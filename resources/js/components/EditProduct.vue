@@ -35,6 +35,7 @@
                         <h6 class="m-0 font-weight-bold text-primary">Variants</h6>
                     </div>
                     <div class="card-body">
+
                         <div class="row" v-for="(item,index) in product_variant">
                             <div class="col-md-4">
                                 <div class="form-group">
@@ -57,6 +58,7 @@
                                 </div>
                             </div>
                         </div>
+
                     </div>
                     <div class="card-footer" v-if="product_variant.length < variants.length && product_variant.length < 3">
                         <button @click="newVariant" class="btn btn-primary">Add another option</button>
@@ -91,7 +93,7 @@
             </div>
         </div>
 
-        <button @click="saveProduct" type="submit" class="btn btn-lg btn-primary">Save</button>
+        <button @click="updateProduct" type="submit" class="btn btn-lg btn-primary">Save</button>
         <button type="button" class="btn btn-secondary btn-lg">Cancel</button>
     </section>
 </template>
@@ -110,6 +112,10 @@ export default {
         variants: {
             type: Array,
             required: true
+        },
+        product: {
+            type: Number,
+            required: true
         }
     },
     data() {
@@ -118,12 +124,8 @@ export default {
             product_sku: '',
             description: '',
             images: [],
-            product_variant: [
-                {
-                    option: this.variants[0].id,
-                    tags: []
-                }
-            ],
+            product_variants: [],
+            product_variant: [],
             product_variant_prices: [],
             dropzoneOptions: {
                 url: '/product/upload',
@@ -136,6 +138,30 @@ export default {
         }
     },
     methods: {
+        // Fecth product data
+        fetchProduct(){
+            axios.get(`/product/${this.product}/get`).then(response => {
+                let product = response.data.product;
+                this.product_name = product.title;
+                this.product_sku = product.sku;
+                this.description = product.description;
+
+                this.product_variants = product.variant;
+
+                for(let variant of product.variant) {
+                    this.product_variant.push({
+                        option: variant.variant_id,
+                        tags: variant.variant
+                    })
+                }
+
+                this.product_variant_prices = product.prices;
+                // this.product_name = product.title;
+                console.log(response.data);
+            }).catch(error => {
+                console.log(error);
+            })
+        },
         // it will push a new object into product variant
         newVariant() {
             let all_variants = this.variants.map(el => el.id)
@@ -180,8 +206,8 @@ export default {
             return ans;
         },
 
-        // store product into database
-        saveProduct() {
+        // update product into database
+        updateProduct() {
             let product = {
                 title: this.product_name,
                 sku: this.product_sku,
@@ -191,18 +217,21 @@ export default {
                 product_variant_prices: this.product_variant_prices
             }
 
-            axios.post('/product', product).then(response => {
+            console.log(product);
+
+            axios.put(`/product/${this.product}`, product).then(response => {
                 console.log(response.data);
             }).catch(error => {
                 console.log(error);
             })
 
-            console.log(product);
+            // console.log(product);
         }
 
 
     },
     mounted() {
+        this.fetchProduct();
         // console.log(this.$refs.myVueDropzone)
     }
 }

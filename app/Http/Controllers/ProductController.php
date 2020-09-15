@@ -150,7 +150,14 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         $variants = Variant::all();
-        return view('products.edit', compact('variants'));
+        return view('products.edit', compact('variants', 'product'));
+    }
+
+    public function getProduct($id)
+    {
+        $product = Product::with(['image', 'variant', 'prices'])->whereId($id)->first();
+
+        return response()->json(['product' => $product]);
     }
 
     /**
@@ -162,7 +169,56 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        //
+        $product->title = $request->title;
+        $product->sku = $request->sku;
+        $product->description = $request->description;
+        $product->save();
+        // Product Image
+        if(count($request->product_image) > 1) {
+            $file = $request->product_image[0];
+            $url = $file['dataURL'];
+            $filenamePartials = explode('.', $file['upload']['filename']);
+            $basename = $filenamePartials[0];
+            $extension = $filenamePartials[1];
+            $uniqe_id =  uniqid();
+            $filename = $uniqe_id . '.'.$extension;
+            $file = "/public/images/{$filename}";
+            \Storage::put($file, file_get_contents($url));
+
+            // Store
+            $productImage = new ProductImage;
+            $productImage->product_id = $product->id;
+            $productImage->file_path = public_path() . "/images/{$filename}";
+            $productImage->save();
+        }
+
+        $product->variant()->delete();
+
+        // Product variant
+        foreach($request->product_variant as $variant) {
+            $variantModel = Variant::find($variant['option']);
+
+            $productVariant = new ProductVariant;
+            $productVariant->variant = implode(',', $variant['tags']);
+            $productVariant->variant_id = $variant['option'];
+            $productVariant->product_id = $product->id;
+            $productVariant->save();
+        }
+        // Product variant prices
+        $product->prices()->delete();
+        foreach($request->product_variant_prices as $variant_price) {
+            $variants = $product->variant;
+
+            $productVariant = new ProductVariantPrice;
+            $productVariant->product_variant_one = isset($variants[0]) ? $variants[0]->id : null;
+            $productVariant->product_variant_two = isset($variants[1]) ? $variants[1]->id : null;
+            $productVariant->product_variant_three = isset($variants[2]) ? $variants[2]->id : null;
+            $productVariant->price = $variant_price['price'];
+            $productVariant->stock = $variant_price['stock'];
+            $productVariant->product_id = $product->id;
+            $productVariant->save();
+        }
+        return response()->json(['product' => $request->all()]);
     }
 
     /**
