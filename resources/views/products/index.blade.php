@@ -57,7 +57,7 @@
                     @forelse($products as $key => $product)
                     <tr>
                         <td>{{ $key + 1 }}</td>
-                        <td> {{ $product->title }} <br> Created at : {{ $product->created_at }}</td>
+                        <td> {{ $product->title }} <br> Created at : {{ \Carbon\Carbon::createFromTimeStamp(strtotime($product->created_at))->diffForHumans() }}</td>
                         <td>{{ $product->description }}</td>
                         <td>
                             <dl class="row mb-0" style="height: 80px; overflow: hidden" id="{{ 'variant_' . $key }}">
@@ -104,7 +104,11 @@
         <div class="card-footer">
             <div class="row justify-content-between">
                 <div class="col-md-6">
-                    <p>Showing 1 to 10 out of 100</p>
+                    @if(($products->currentPage() * $products->perPage()) < $products->total())
+                    <p>Showing {{ (($products->currentPage() - 1) * $products->perPage()) + 1 }} to {{ $products->currentPage() * $products->perPage() }} out of {{ $products->total() }}</p>
+                    @else
+                    <p>Showing {{ (($products->currentPage() - 1) * $products->perPage()) + 1 }} out of {{ $products->total() }}</p>
+                    @endif
                 </div>
                 <div class="col-md-2">
                 {{ $products->links() }}
