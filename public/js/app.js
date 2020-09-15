@@ -2038,11 +2038,11 @@ __webpack_require__.r(__webpack_exports__);
       }],
       product_variant_prices: [],
       dropzoneOptions: {
-        url: 'https://httpbin.org/post',
+        url: '/product/upload',
         thumbnailWidth: 150,
         maxFilesize: 0.5,
         headers: {
-          "My-Awesome-Header": "header value"
+          "X-CSRF-TOKEN": document.head.querySelector("[name=csrf-token]").content
         }
       }
     };
@@ -2071,6 +2071,7 @@ __webpack_require__.r(__webpack_exports__);
     checkVariant: function checkVariant() {
       var _this = this;
 
+      console.log(this);
       var tags = [];
       this.product_variant_prices = [];
       this.product_variant.filter(function (item) {
@@ -2104,7 +2105,7 @@ __webpack_require__.r(__webpack_exports__);
         title: this.product_name,
         sku: this.product_sku,
         description: this.description,
-        product_image: this.images,
+        product_image: this.$refs.myVueDropzone.getAcceptedFiles(),
         product_variant: this.product_variant,
         product_variant_prices: this.product_variant_prices
       };
@@ -2116,8 +2117,7 @@ __webpack_require__.r(__webpack_exports__);
       console.log(product);
     }
   },
-  mounted: function mounted() {
-    console.log('Component mounted.');
+  mounted: function mounted() {// console.log(this.$refs.myVueDropzone)
   }
 });
 
@@ -50542,7 +50542,7 @@ var render = function() {
                   }
                 ],
                 staticClass: "form-control",
-                attrs: { id: "", cols: "30", rows: "4" },
+                attrs: { id: "description", cols: "30", rows: "4" },
                 domProps: { value: _vm.description },
                 on: {
                   input: function($event) {
@@ -63300,8 +63300,8 @@ __webpack_require__.r(__webpack_exports__);
 /*! no static exports found */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(/*! /home/rifat/Programming/mediusware/interview/interview-question-sr/resources/js/app.js */"./resources/js/app.js");
-module.exports = __webpack_require__(/*! /home/rifat/Programming/mediusware/interview/interview-question-sr/resources/sass/app.scss */"./resources/sass/app.scss");
+__webpack_require__(/*! C:\xampp\htdocs\mediusware\resources\js\app.js */"./resources/js/app.js");
+module.exports = __webpack_require__(/*! C:\xampp\htdocs\mediusware\resources\sass\app.scss */"./resources/sass/app.scss");
 
 
 /***/ })

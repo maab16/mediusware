@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Variant;
+use Faker\Provider\Image;
+use App\Models\ProductImage;
+use Illuminate\Http\Request;
 use App\Models\ProductVariant;
 use App\Models\ProductVariantPrice;
-use App\Models\Variant;
-use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
@@ -15,9 +17,47 @@ class ProductController extends Controller
      *
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Http\Response|\Illuminate\View\View
      */
-    public function index()
+    public function index(Request $request)
     {
-        return view('products.index');
+
+        $query = new Product;
+        if(!empty($request->title)) {
+            $query = Product::where('title', 'like', '%'.$request->title.'%');
+        }
+
+        if(!empty($request->date)) {
+            $date = $request->date;
+            $query = $query->whereDate('created_at', '=', $date);
+        }
+
+        if(!empty($request->variant)) {
+            $variant =  $request->variant;
+            $query = $query->whereHas('variant', function($q) use($variant) {
+                return $q->where('variant_id', $variant);
+            });
+        }
+
+        if(!empty($request->price_from) && !empty($request->price_to)) {
+            $minPrice = $request->price_from > 0 ? $request->price_from : 0;
+            $maxPrice = $request->price_to > 0 ? $request->price_to : 0;
+            $query = $query->whereHas('prices', function($q) use($minPrice, $maxPrice) {
+                return $q->whereBetween('price', [$minPrice, $maxPrice]);
+            });
+        }
+
+
+        $products = $query == '' ? Product::paginate(3) : $query->paginate(3);
+
+        $products->appends([
+            'title' => $request->title,
+            'variant' => $request->variant,
+            'price_from' => $request->price_from,
+            'price_to' => $request->price_to,
+            'date' => $request->date
+        ]);
+        $variants = Variant::all();
+
+        return view('products.index', compact('products', 'variants'));
     }
 
     /**
@@ -39,7 +79,54 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $product = new Product;
+        $product->title = $request->title;
+        $product->sku = $request->sku;
+        $product->description = $request->description;
+        $product->save();
+        // Product Image
+        if(count($request->product_image) > 1) {
+            $file = $request->product_image[0];
+            $url = $file['dataURL'];
+            $filenamePartials = explode('.', $file['upload']['filename']);
+            $basename = $filenamePartials[0];
+            $extension = $filenamePartials[1];
+            $uniqe_id =  uniqid();
+            $filename = $uniqe_id . '.'.$extension;
+            $file = "/public/images/{$filename}";
+            \Storage::put($file, file_get_contents($url));
 
+            // Store
+            $productImage = new ProductImage;
+            $productImage->product_id = $product->id;
+            $productImage->file_path = public_path() . "/images/{$filename}";
+            $productImage->save();
+        }
+
+        // Product variant
+        foreach($request->product_variant as $variant) {
+            // $variantModel = Variant::find($variant['option']);
+
+            $productVariant = new ProductVariant;
+            $productVariant->variant = implode(',', $variant['tags']);
+            $productVariant->variant_id = $variant['option'];
+            $productVariant->product_id = $product->id;
+            $productVariant->save();
+        }
+        // Product variant prices
+        foreach($request->product_variant_prices as $variant_price) {
+            $variants = $product->variant;
+
+            $productVariant = new ProductVariantPrice;
+            $productVariant->product_variant_one = isset($variants[0]) ? $variants[0]->id : null;
+            $productVariant->product_variant_two = isset($variants[1]) ? $variants[1]->id : null;
+            $productVariant->product_variant_three = isset($variants[2]) ? $variants[2]->id : null;
+            $productVariant->price = $variant_price['price'];
+            $productVariant->stock = $variant_price['stock'];
+            $productVariant->product_id = $product->id;
+            $productVariant->save();
+        }
+        return response()->json(['product' => $product]);
     }
 
 
@@ -87,5 +174,26 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         //
+    }
+
+    public function search(Request $request)
+    {
+
+        var_dump("search");
+        die();
+
+        if(!empty($request->title)) {
+            $query = Product::where('title', 'like', '%'.$request->title.'%');
+        }
+
+        $products = $query->paginate(3);
+
+        return view('products.index', compact('products'));
+    }
+
+    public function upload(Request $request)
+    {
+        $imageName = time().'.'.$request->file->getClientOriginalExtension();
+        // $request->file->move(public_path('iamges/products'), $imageName);
     }
 }
